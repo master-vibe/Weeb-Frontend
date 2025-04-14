@@ -1,4 +1,4 @@
-// stomp.service.js
+// StompService.js
 import { Client } from '@stomp/stompjs';
 
 class StompService {
@@ -8,53 +8,45 @@ class StompService {
             reconnectDelay: 5000,
             heartbeatIncoming: 4000,
             heartbeatOutgoing: 4000,
+            debug: str => console.log('[STOMP DEBUG]', str),
         });
+
+        this.connected = false;
+    }
+
+    static getInstance() {
+        if (!StompService.instance) {
+            StompService.instance = new StompService();
+        }
+        return StompService.instance;
+    }
+
+    getClient() {
+        return this.client;
     }
 
     async connect() {
-        try {
-            await this.client.connect();
-            console.log('Connected to Stomp broker');
-        } catch (error) {
-            console.error('Error connecting to Stomp broker:', error);
-        }
+        if (this.connected) return;
+
+        return new Promise((resolve, reject) => {
+            this.client.onConnect = () => {
+                this.connected = true;
+                resolve();
+            };
+            this.client.onStompError = (frame) => {
+                console.error('Broker reported error:', frame.headers['message']);
+                reject(frame.body);
+            };
+            this.client.activate();
+        });
     }
 
     async disconnect() {
-        try {
-            await this.client.disconnect();
-            console.log('Disconnected from Stomp broker');
-        } catch (error) {
-            console.error('Error disconnecting from Stomp broker:', error);
-        }
-    }
-
-    async subscribe(destination, callback) {
-        try {
-            await this.client.subscribe(destination, callback);
-            console.log(`Subscribed to destination: ${destination}`);
-        } catch (error) {
-            console.error(`Error subscribing to destination: ${destination}`, error);
-        }
-    }
-
-    async unsubscribe(destination) {
-        try {
-            await this.client.unsubscribe(destination);
-            console.log(`Unsubscribed from destination: ${destination}`);
-        } catch (error) {
-            console.error(`Error unsubscribing from destination: ${destination}`, error);
-        }
-    }
-
-    async send(destination, message) {
-        try {
-            await this.client.send(destination, {}, JSON.stringify(message));
-            console.log(`Sent message to destination: ${destination}`);
-        } catch (error) {
-            console.error(`Error sending message to destination: ${destination}`, error);
+        if (this.client && this.connected) {
+            await this.client.deactivate();
+            this.connected = false;
         }
     }
 }
 
-export default new StompService();
+export default StompService.getInstance();

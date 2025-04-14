@@ -1,15 +1,16 @@
 // LoginPage.js
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../Components/UI/Button";
 import ApiService from "../Services/ApiService";
+import { setCookie } from "../Utils/Cookie";
 
-export default function LoginPage({ setUsername, setIsLoggedIn }) {
+export default function LoginPage({ setUsername, setIsLoggedIn}) {
     const [name, setName] = useState("");
     const [password, setPassword] = useState("");
     const navigate = useNavigate();
 
-    const handleLogin = async () => {
+        const handleLogin = async () => {
         if (name.trim() && password.trim()) {
             try {
                 const response = await ApiService.request("/auth/login", "POST", {
@@ -18,7 +19,8 @@ export default function LoginPage({ setUsername, setIsLoggedIn }) {
                         password,
                     },
                 });
-                if (response.success) {
+                if (response.jwtToken) {
+                    setCookie("token", response.jwtToken, { path: "/" });
                     setUsername(name);
                     setIsLoggedIn(true);
                     navigate("/home");
